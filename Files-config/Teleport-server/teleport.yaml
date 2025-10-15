@@ -1,0 +1,24 @@
+version: v3
+teleport:
+nodename: teleport
+data_dir: /var/lib/teleport
+log:
+    output: stderr
+    severity: INFO
+    format:
+    output: text
+ca_pin: ""
+diag_addr: ""
+auth_service:
+enabled: "yes"
+listen_addr: 0.0.0.0:3025
+cluster_name: teleport-onpre.anphuc.site
+proxy_listener_mode: multiplex
+ssh_service:
+enabled: "yes"
+proxy_service:
+enabled: "yes"
+web_listen_addr: 0.0.0.0:443
+public_addr: 192.168.254.100:334
+https_keypairs: []
+https_keypairs_reload_interval: 0s

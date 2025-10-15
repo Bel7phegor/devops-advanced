@@ -1,0 +1,13 @@
+FROM ubuntu:latest
+
+RUN apt update -Y && \
+    apt install -y wget tar && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN wget https://github.com/Arachni/arachni/releases/download/v1.6.0/arachni-1.6.0-0.6.0-linux-x86_64.tar.gz 
+    tar -xvf arachni-1.6.0-0.6.0-linux-x86_64.tar.gz && \
+    rm arachni-1.6.0-0.6.0-linux-x86_64.tar.gz
+    
+WORKDIR /arachni-1.6.0-0.6.0
+
+CMD ["bin/arachni"]

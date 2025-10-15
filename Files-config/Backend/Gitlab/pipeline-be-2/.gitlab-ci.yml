@@ -1,0 +1,64 @@
+variables:
+    USER_PROJECT: "onlineshop"
+    RUNNER: "online-shop-runner-dev-shell"
+    PATH_PROJECT: "/home/${USER_PROJECT}/${CI_PROJECT_NAME}"
+    ZIP_VERSION: "${CI_PROJECT_NAME}-${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_SHORT_TAG}.zip"
+
+stages:
+    - build
+    - push
+    - deploy
+    - checklog
+
+build:
+    stage: build
+    variables:
+        GIT_STRATEGY: clone
+    script:
+        - dotnet restore
+        - zip -r $ZIP_VERSION .
+    tags:
+        - ${RUNNER}
+    only:
+        - tags
+
+push:
+    stage: push
+    variables:
+        GIT_STRATEGY: none
+    # 3 biến ${ARTIFACT_USER}, ${ARTIFACT_PASSWORD} và ${ARTIFACT_URL} được thêm vào biến toàn cục của group
+    script:
+        - curl -X PUT -u $ARTIFACT_USER:'$ARTIFACT_PASSWORD' -T $ZIP_VERSION "$ARTIFACT_URL/$ZIP_VERSION"
+    tags:
+        - ${RUNNER}
+    only:
+        - tags
+
+deploy:
+    stage: deploy
+    variables:
+        GIT_STRATEGY: none
+    script:
+        - sudo su ${USER_PROJECT} -c "cd ${PATH_PROJECT};rm -rf *;curl -u $ARTIFACT_USER:'$ARTIFACT_PASSWORD' -O "$ARTIFACT_URL/$ZIP_VERSION";unzip -o $ZIP_VERSION"
+        - sudo chown -R ${USER_PROJECT}. ${PATH_PROJECT}
+        - |
+            pid=$(sudo netstat -tpuln | grep :5214 | awk '{print $7}' | cut -d'/' -f1) || true
+            if [ -n "$pid" ]; then
+                sudo kill -9 ${pid}
+            fi
+        - sudo su ${USER_PROJECT} -c "cd ${PATH_PROJECT}; nohup dotnet run > log.txt 2>&1 &"
+    tags:
+        - ${RUNNER}
+    only:
+        - tags
+
+checklog:
+  stage: showlog
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - sudo su ${USER_PROJECT} -c "cd ${PATH_PROJECT};tail -n 100 log.txt"
+  tags: 
+    - online-shop-runner-build-shell
+  only:
+    - tags

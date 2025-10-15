@@ -1,0 +1,44 @@
+VARIABLES:
+  USER_PROJECT: "onlineshop"
+  IMAGE_VERSION: "$(CI_PROJECT_NAME):$(CI_COMMIT_REF_NAME)_$(CI_COMMIT_SHORT_SHA)"
+
+stages:
+  - build
+  - deploy
+  - showlog
+
+build:
+  stage: build
+  variables:
+    GIT_STRATEGY: clone
+  script:
+    - docker build -t $IMAGE_VERSION .
+  tags: 
+    - online-shop-runner-build-shell
+  only:
+    - tags
+
+deploy:
+  stage: deploy
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - sudo su $(USER_PROJECT) -c "docker rm -f $CI_PROJECT_NAME; docker run --name $CI_PROJECT_NAME -dp $FE_PORT $IMAGE_VERSION"
+  tags: 
+    - online-shop-runner-build-shell
+  only:
+    - tags
+
+checklog:
+  stage: showlog
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - docker logs $CI_PROJECT_NAME 
+  tags: 
+    - online-shop-runner-build-shell
+  only:
+    - tags
+
+## Commit 
+## Config(pipeline): setup ci/cd

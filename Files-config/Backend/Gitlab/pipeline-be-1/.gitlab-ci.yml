@@ -1,0 +1,49 @@
+variables:
+    USER_PROJECT: "onlineshop"
+    RUNNER: "online-shop-runner-dev-shell"
+    PATH_PROJECT: "/home/${USER_PROJECT}/${CI_PROJECT_NAME}"
+
+stages:
+    - build
+    - deploy
+    - showlog
+
+build:
+    stage: build
+    variables:
+        GIT_STRATEGY: clone
+    script:
+        - dotnet restore
+    tags:
+        - ${RUNNER}
+    only:
+        - tags
+        
+deploy:
+    stage: deploy
+    variables:
+        GIT_STRATEGY: none
+    script:
+        - sudo cp -rf * ${PATH_PROJECT}
+        - sudo chown -R ${USER_PROJECT}. ${PATH_PROJECT}
+        - |
+            pid=$(sudo netstat -tpuln | grep :5214 | awk '{print $7}' | cut -d'/' -f1) || true
+            if [ -n "$pid"]; then
+                sudo kill -9 ${pid}
+            fi
+        - sudo su ${USER_PROJECT} -c "cd ${PATH_PROJECT}; nohup dotnet run > log.txt 2>&1 &"
+    tags:
+        - ${RUNNER}
+    only:
+        - tags
+
+checklog:
+  stage: showlog
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - sudo su ${USER_PROJECT} -c "tail -f log.txt"
+  tags: 
+    - online-shop-runner-build-shell
+  only:
+    - tags

@@ -1,0 +1,98 @@
+variables:
+    USER_PROJECT: "onlineshop"
+    IMAGE_VERSION: "${CI_PROJECT_NAME}:${CI_COMMIT_REF_NAME}_${CI_COMMIT_SHORT_SHA}"
+    CODECLIMATE_REPORT: "codeclimate_analysis_${CI_PROJECT_NAME}_${CI_COMMIT_REF_NAME}_${CI_COMMIT_SHORT_SHA}_report"
+    SNYKSCAN_REPORT: "snyk_scan_${CI_PROJECT_NAME}_${CI_COMMIT_REF_NAME}_${CI_COMMIT_SHORT_SHA}_report"
+    TRIVYFS_REPORT: "trivyfs_scan_${CI_PROJECT_NAME}_${CI_COMMIT_REF_NAME}_${CI_COMMIT_SHORT_SHA}_report"
+    TRIVY_IMAGE_REPORT: "security_scan_image_${CI_PROJECT_NAME}_${CI_COMMIT_REF_NAME}_${CI_COMMIT_SHORT_SHA}_report"
+
+stages:
+    - build
+    - test source code
+    - security scan image
+    - deploy
+
+build:
+    stage: build
+    variables:
+        GIT_STRATEGY: clone
+    script:
+        - docker build -t $IMAGE_VERSION .
+    tags:
+        - online-shop-runner-dev-shell
+    only:
+        - tags
+
+codeclimate analyze:
+    stage: test source code
+    variables:
+        GIT_STRATEGY: none
+    script:
+        - docker run --rm --env CODECLIMATE_CODE="$PWD" --volume "$PWD":/code --volume /var/run/docker.sock:/var/run/docker.sock --volume /tmp/cc:/tmp/cc codeclimate/codeclimate analyze -f html > $CODECLIMATE_REPORT.html
+    tags:
+        - online-shop-runner-dev-shell
+    only:
+        - tags
+    artifacts:
+        paths:
+        - $CODECLIMATE_REPORT.html
+        expire_in: 1 day
+
+trivyfs scan:
+    stage: test source code
+    variables:
+        GIT_STRATEGY: clone
+    script:
+        - docker run --rm -v $PWD:/${CI_PROJECT_NAME} -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy fs /${CI_PROJECT_NAME} --severity HIGH,CRITICAL --format template --template "@contrib/html.tpl" --output /${CI_PROJECT_NAME}/$TRIVYFS_REPORT.html
+    tags:
+        - online-shop-runner-dev-shell
+    only:
+        - tags
+    artifacts:
+        paths:
+        - $TRIVYFS_REPORT.html
+        expire_in: 1 day
+
+snyk scan:
+    stage: test source code
+    variables:
+        GIT_STRATEGY: clone
+    script:
+        - docker build --rm --network host --build-arg SNYK_AUTH_TOKEN=$SNYK_TOKEN --build-arg OUTPUT_FILENAME=$SNYKSCAN_REPORT -t $SNYKSCAN_REPORT -f Dockerfile-snyk .
+        - docker create --name $SNYKSCAN_REPORT $SNYKSCAN_REPORT
+        - docker cp $SNYKSCAN_REPORT:/app/$SNYKSCAN_REPORT.html .
+    tags:
+        - online-shop-runner-dev-shell
+    only:
+        - tags
+    artifacts:
+        paths:
+        - $SNYKSCAN_REPORT.html
+        expire_in: 1 day
+
+trivy scan image:
+    stage: security scan image
+    variables:
+        GIT_STRATEGY: none
+    script:
+        - docker run --rm -v $(pwd):/${CI_PROJECT_NAME} -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --reset
+        - docker run --rm -v $(pwd):/${CI_PROJECT_NAME} -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --format template --template "@contrib/html.tpl" --output /${CI_PROJECT_NAME}/${TRIVY_IMAGE_REPORT}.html $IMAGE_VERSION
+    tags:
+        - online-shop-runner-dev-shell
+    only:
+        - tags
+    artifacts:
+        paths:
+        - ${TRIVY_IMAGE_REPORT}.html
+        expire_in: 1 day
+
+deploy:
+    stage: deploy
+    variables:
+        GIT_STRATEGY: none
+    script:
+        - sudo su ${USER_PROJECT} -c "docker rm -f $CI_PROJECT_NAME; docker run --name $CI_PROJECT_NAME -dp $BE_PORT $IMAGE_VERSION"
+    tags:
+        - online-shop-runner-dev-shell
+    only:
+        - tags

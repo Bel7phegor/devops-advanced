@@ -1,0 +1,67 @@
+VARIABLES:
+  USER_PROJECT: "onlineshop"
+  IMAGE_VERSION: "${CI_PROJECT_NAME}:${CI_COMMIT_REF_NAME}_${CI_COMMIT_SHORT_SHA}"
+
+stages:
+  - build
+  - push
+  - deploy
+  - showlog
+
+build:
+  stage: build
+  variables:
+    GIT_STRATEGY: clone
+  # 3 biến bên dưới được cấu hình trong variable của group
+  before_script:
+    - docker login $CI_REGISTRY_DOMAIN -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD  
+  script:
+    - docker build -t $IMAGE_VERSION .
+  tags: 
+    - online-shop-runner-build-shell
+  only:
+    - tags
+
+push:
+  stage: push
+  variables:
+    GIT_STRATEGY: none
+  before_script:
+    - docker login $CI_REGISTRY_DOMAIN -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD  
+  script:
+    - docker push $IMAGE_VERSION
+  after_script:
+    - docker logout $CI_REGISTRY_DOMAIN
+  tags: 
+    - online-shop-runner-build-shell
+  only:
+    - tags
+  
+deploy:
+  stage: deploy
+  variables:
+    GIT_STRATEGY: none
+  before_script:
+    - docker login $CI_REGISTRY_DOMAIN -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD  
+  script:
+    - docker pull $IMAGE_VERSION
+    - sudo su $(USER_PROJECT) -c "docker rm -f $CI_PROJECT_NAME; docker run --name $CI_PROJECT_NAME -dp $BE_PORT $IMAGE_VERSION"
+  after_script:
+    - docker logout $CI_REGISTRY_DOMAIN
+  tags: 
+    - online-shop-runner-build-shell
+  only:
+    - tags
+
+checklog:
+  stage: showlog
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - docker logs $CI_PROJECT_NAME
+  tags: 
+    - online-shop-runner-build-shell
+  only:
+    - tags
+## Commit 
+## Config(pipeline): setup ci/cd

@@ -1,0 +1,3 @@
+include:
+  - project: 'config/pipeline'
+    file: 'online-shop-backend.yml'

@@ -1,0 +1,15 @@
+[Unit]
+Description=Jenkins Agent Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/lib/jenkins
+ExecStart=/bin/bash -c 'java -jar agent.jar -jnlpUrl url-jenkins-connection -secret @secret-file -workDir "/var/lib/jenkins"'
+User=jenkins
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+/etc/systemd/system/jenkins-agent.service

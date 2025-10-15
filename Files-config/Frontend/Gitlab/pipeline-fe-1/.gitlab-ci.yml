@@ -1,0 +1,32 @@
+variables:
+    USER_PROJECT: "onlineshop"
+    PATH_PROJECT: "/home/${USER_PROJECT}/${CI_PROJECT_NAME}"
+    
+stages:
+    - build
+    - deploy
+
+build:
+    stage: build
+    variables:
+        GIT_STRATEGY: clone
+    script:
+        - npm install --force
+    tags:
+        - online-shop-runner-dev-shell
+    only:
+        - tags
+    
+deploy:
+    stage: deploy
+    variables:
+        GIT_STRATEGY: none
+    script:
+        - sudo cp -rf * ${PATH_PROJECT}
+        - sleep 5
+        - sudo chown -R ${USER_PROJECT}. ${PATH_PROJECT}
+        - sudo su ${USER_PROJECT} -c "cd ${PATH_PROJECT} && pm2 delete ${CI_PROJECT_NAME} || true &&  pm2 start npm --name ${CI_PROJECT_NAME} -- run 'start'"
+    tags:
+        - online-shop-runner-dev-shell
+    only:
+        - tags
