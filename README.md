@@ -1,5 +1,65 @@
-# Triển khai công cụ quản lý truy cập trên máy chủ doanh nghiệp 
-## Thực hiện trên server Teleport (cài version cũ để upgrade)
+<details>
+<summary><strong>Table of Contents (Mục lục)</strong></summary>
+
+- [1. Triển khai công cụ quản lý truy cập trên máy chủ doanh nghiệp](#1-triển-khai-công-cụ-quản-lý-truy-cập-trên-máy-chủ-doanh-nghiệp)
+  - [1.1. Thực hiện trên server Teleport (cài version cũ để upgrade)](#11-thực-hiện-trên-server-teleport-cài-version-cũ-để-upgrade)
+  - [1.2. Thực hiện trên server Loadbalancer](#12-thực-hiện-trên-server-loadbalancer)
+  - [1.3. Thực hiện trên server Teleport](#13-thực-hiện-trên-server-teleport)
+- [2. Cài đặt cụm quản lý dữ liệu đảm bảo HA](#2-cài-đặt-cụm-quản-lý-dữ-liệu-đảm-bảo-ha)
+  - [2.1. Mô hình](#21-mô-hình)
+  - [2.2. Cấu hình và cài đặt](#22-cấu-hình-và-cài-đặt)
+    - [2.2.1. Cấu hình](#221-cấu-hình)
+    - [2.2.2. Cài đặt Cluster FS](#222-cài-đặt-cluster-fs)
+- [3. DEVSECOPS pipeline](#3-devsecops-pipeline)
+  - [3.1. Thiết lập cấu hình các server của dự án](#31-thiết-lập-cấu-hình-các-server-của-dự-án)
+    - [3.1.1. Thiết lập server](#311-thiết-lập-server)
+    - [3.1.2. Cài đặt Gitlab server](#312-cài-đặt-gitlab-server)
+  - [3.2. Triển khai dự án fullstack ecommerce](#32-triển-khai-dự-án-fullstack-ecommerce)
+    - [3.2.1. Triển khai cài đặt các cụm server](#321-triển-khai-cài-đặt-các-cụm-server)
+        - [3.2.1.0.1. Dev server](#32101-dev-server)
+      - [3.2.1.1. Dự án fontend](#3211-dự-án-fontend)
+  - [3.3. Thiết lập dự án trên Gitlab](#33-thiết-lập-dự-án-trên-gitlab)
+  - [3.4. Quy trình triển khai mọi dự án](#34-quy-trình-triển-khai-mọi-dự-án)
+  - [3.5. Bản chất của việc triển khai tự động](#35-bản-chất-của-việc-triển-khai-tự-động)
+  - [3.6. Các chiến lược gitlab runner](#36-các-chiến-lược-gitlab-runner)
+  - [3.7. Quy trình 1 (Chạy dự án bằng daemon)](#37-quy-trình-1-chạy-dự-án-bằng-daemon)
+    - [3.7.1. Backend](#371-backend)
+    - [3.7.2. Frontend](#372-frontend)
+  - [3.8. Quy trình 2 (Tạo thêm artifacts và lưu code đã build để thuận tiện việc rollback)](#38-quy-trình-2-tạo-thêm-artifacts-và-lưu-code-đã-build-để-thuận-tiện-việc-rollback)
+    - [3.8.1. Thông tin, lý thuyết cần có](#381-thông-tin-lý-thuyết-cần-có)
+    - [3.8.2. Trên server `artifacts JFrog`](#382-trên-server-artifacts-jfrog)
+    - [3.8.3. Trên `server build`](#383-trên-server-build)
+    - [3.8.4. Tích hợp vào `ci/cd`](#384-tích-hợp-vào-cicd)
+  - [3.9. Quy trình 3 (Chạy dự án bằng docker độc lập)](#39-quy-trình-3-chạy-dự-án-bằng-docker-độc-lập)
+  - [3.10. Quy trình 4 (Dựng lên 1 kho lưu trữ các docker image)](#310-quy-trình-4-dựng-lên-1-kho-lưu-trữ-các-docker-image)
+    - [3.10.1. Các yêu cầu, quy trình thiết lập ban đầu](#3101-các-yêu-cầu-quy-trình-thiết-lập-ban-đầu)
+    - [3.10.2. Cấu hình chính](#3102-cấu-hình-chính)
+  - [3.11. Quy trình 5 (Tư duy bảo vệ file tự động)](#311-quy-trình-5-tư-duy-bảo-vệ-file-tự-động)
+  - [3.12. Quy trình 6 SAST (Thiết lập quét mã nguồn, kiểm tra source code)](#312-quy-trình-6-sast-thiết-lập-quét-mã-nguồn-kiểm-tra-source-code)
+    - [3.12.1. Phương hướng, thiết lập tư duy](#3121-phương-hướng-thiết-lập-tư-duy)
+    - [3.12.2. Sử dụng codeclimate](#3122-sử-dụng-codeclimate)
+    - [3.12.3. Sử dụng Snyk](#3123-sử-dụng-snyk)
+  - [3.13. Quy trình 7 SCA (Kiểm tra bảo mật phần hạ tầng)](#313-quy-trình-7-sca-kiểm-tra-bảo-mật-phần-hạ-tầng)
+    - [3.13.1. Triển khai thủ công](#3131-triển-khai-thủ-công)
+  - [3.14. Quy trình 8 ()](#314-quy-trình-8-)
+    - [3.14.1. Cài đặt và sử dụng trực tiếp bằng giao diện](#3141-cài-đặt-và-sử-dụng-trực-tiếp-bằng-giao-diện)
+    - [3.14.2. Cài đặt và sử dụng trực tiếp bằng CLI](#3142-cài-đặt-và-sử-dụng-trực-tiếp-bằng-cli)
+    - [3.14.3. Chạy trên pipeline](#3143-chạy-trên-pipeline)
+  - [3.15. Quy trình 9 (Kiểm tra hiệu năng)](#315-quy-trình-9-kiểm-tra-hiệu-năng)
+    - [3.15.1. Cài đặt k6 và triển khai test](#3151-cài-đặt-k6-và-triển-khai-test)
+    - [3.15.2. Triển khai trên pipeline](#3152-triển-khai-trên-pipeline)
+  - [3.16. Triển khai bằng Jenkins](#316-triển-khai-bằng-jenkins)
+    - [3.16.1. Cài đặt và cấu hình](#3161-cài-đặt-và-cấu-hình)
+    - [3.16.2. Xây dựng quy trình pipeline trên Jenkins](#3162-xây-dựng-quy-trình-pipeline-trên-jenkins)
+  - [3.17. Triển khai dự án bằng Kubernetes](#317-triển-khai-dự-án-bằng-kubernetes)
+    - [3.17.1. Cài đặt và cấu hình](#3171-cài-đặt-và-cấu-hình)
+    - [3.17.2. Lý thuyết](#3172-lý-thuyết)
+  - [GitOps with ArgoCD](#gitops-with-argocd)
+</details>
+
+---
+# 1. Triển khai công cụ quản lý truy cập trên máy chủ doanh nghiệp 
+## 1.1. Thực hiện trên server Teleport (cài version cũ để upgrade)
 - Cài đặt teleport-server: [teleport-install.sh](/Tools-install/teleport/teleport-install.sh)
 - Tạo file cấu hình teleport: `vi /etc/teleport/` [teleport.yaml](/Files-config/Teleport-server/teleport.yaml)
 - Tạo file service `vi /etc/systemd/system/` [teleport.service](/Files-config/Teleport-server/teleport.service)
@@ -9,7 +69,7 @@
     systemctl start teleport
     systemctl status teleport
     ```
-## Thực hiện trên server Loadbalancer
+## 1.2. Thực hiện trên server Loadbalancer
     ```
     apt install apache2-utils certbot python3-certbot-nginx -y
     sudo certbot certonly --standalone -d teleport-onpre.anphuc.site --preferred-challenges http --agree-tos -m $EMAIL --keep-until-expiring
@@ -48,7 +108,7 @@
     scp /etc/letsencrypt/live/teleport-onpre.devopseduvn.live/fullchain.pem root@192.168.100.103:/etc/teleport/teleport.crt
     scp /etc/letsencrypt/live/teleport-onpre.devopseduvn.live/privkey.pem root@192.168.100.103:/etc/teleport/teleport.key
     ```
-## Thực hiện trên server Teleport
+## 1.3. Thực hiện trên server Teleport
 - Cấp quyền thực thi cho file cert
     ```
     chmod 600 /etc/teleport/teleport.key
@@ -88,14 +148,14 @@
     systemctl restart teleport
     tctl users add admin --roles=editor,access --logins=root
     ```
-# Cài đặt cụm quản lý dữ liệu đảm bảo HA
+# 2. Cài đặt cụm quản lý dữ liệu đảm bảo HA
 - Nên cài đặt database bằng cách trực tiếp trên server, không nên sử dụng container. 
 - Dựng 1 hạ tầng lưu trữ dữ liệu đảm bảo HA sử dụng 
 - Sử dụng 3 server để tối ưu và giảm server đi nếu tài nguyên không nhiều 
-## Mô hình
+## 2.1. Mô hình
 - Với 3 server sẽ là gom lại thành 1 cụm cluster FS để lưu trữ theo dạng đồng bộ, sử dụng cài đặt NFS server 
-## Cấu hình và cài đặt 
-### Cấu hình 
+## 2.2. Cấu hình và cài đặt 
+### 2.2.1. Cấu hình 
 - Tạo 3 server với name data-master-1/2/3 và với dãy địa chỉ .9->.11
 - Để thông số tùy thuộc vào dữ liệu mình làm, có thể là 1Gb, 2Gb
 - Add thêm 1 disk ở mỗi server (10Gb)
@@ -116,7 +176,7 @@
     sudo df -h
     ```
 - Sau khi mount xong rồi chạy lại `mount -a `
-### Cài đặt Cluster FS
+### 2.2.2. Cài đặt Cluster FS
 - Cài đặt và cấu hình GlusterFS trên cả 3 servers
     ```
     sudo apt install glusterfs-server -y
@@ -136,15 +196,37 @@
     sudo chown -R nobody:nogroup /data/
     ```
 
-# DEVSECOPS
-## Triển khai dự án fullstack ecommerce 
+# 3. DEVSECOPS pipeline
+## 3.1. Thiết lập cấu hình các server của dự án 
+### 3.1.1. Thiết lập server
+- Cần 2 server làm lab và gitlab
+- Sử dụng dãy 192.168.254.x/24 card NAT làm cổng mạng chính
+- Cài net-tools
+- Với lab .99 và gitlab .100
+### 3.1.2. Cài đặt Gitlab server
+- Truy cập `gitlab ee packages` có thể chọn các phiên bản không cần mới nhất 
+- Chọn phiên bản phù hợp với hdh `gitlab-ee_18.7.3-ee.0_arm64.deb` -> ubuntu 
+- Chạy `curl -s https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh | sudo bash` và `sudo apt-get install gitlab-ee=18.7.3-ee.0`
+- Thay đổi url trong file `/etc/gitlab/gitlab.rb` thành **gitlab.anphuc.site** sau đó chạy `sudo gitlab-ctl reconfigure` để áp dụng.
+- Sửa đổi file hosts với domain vừa thiết lập
+- Đọc mật khẩu ở file `/etc/gitlab/initial_root_password` 
+- Tắt các dịch vụ không cần thiết gúp tối ưu hệ thống
+  - Kiểm tra bằng lệnh `gitlab-ctl status` 
+  - Tắt các dịch vụ bằng lệnh `gitlab-ctl stop *Tên dịch vụ*`
+    - Alertmanager
+    - gitlab-kas
+    - node-exporter
+    - grafana
+    - prometheus
+## 3.2. Triển khai dự án fullstack ecommerce 
 ![alt text](/Images/image.png)
 - Triển khai với backend và frontend thành những dự án riêng biệt và giao tiếp với nhau qua API 
 - Tách biệt server-db và server triển khai dự án 
-### Triển khai cài đặt các cụm server 
+### 3.2.1. Triển khai cài đặt các cụm server 
 - Sử dụng 2 server: 1 dev và 1 database server
-#### Dự án backend
-##### Database server
+<h3> 1. Dự án backend </h1>
+
+ Database server
 - Cài đặt sql server = docker và sử dụng cloud beaver để quản lý database
 	- Cài docker: [docker-install.sh](/Tools-install/docker/docker-install.sh), `chmod +x docker-install.sh`
 	- Tạo ra thư mục /tools/sqlserver và di chuyển vào 
@@ -154,7 +236,7 @@
 - Truy cập vào IP:8978 để truy cập vào giao diện của cloud beaver 
 	- Sau đó đăng nhập với tài khoản và mật khẩu admin
 	- Tiếp đến là đăng nhập vào và tạo connect mới với SQL server trước đó phải tạo database mới bên trong container trước 
-		- `docker exec -it sqlserver /opt/mssql-tools/bin/sqlcmd -S "địa chỉ database-server" -U sa -P "password vừa tạo trên container" `
+		- `docker exec -it sqlserver /opt/mssql-tools18/bin/sqlcmd -S "địa chỉ database-server" -U sa -P "password vừa tạo trên container" -C `
             
             ```
             create database OnlineShopDB;
@@ -168,7 +250,7 @@
 	- Thêm file `table-init.sql` để có được dữ liệu vào databse 
 	- Thêm dữ liệu ở góc dưới cùng và file `data-init.sql` sau đó nhấn execute và kiểm tra ở product và user đã được
 	- Thử login với user và password ở phần post (không quan trọng)
-##### Dev server 
+##### 3.2.1.0.1. Dev server 
 - Copy zip dự án vào server sử dụng `scp` 
 - Tiến hành tạo 1 thư mục `projects` và di chuyển dự án vào thư mục này và giải nén 
 	- Sử dụng các cách research để tìm được cách tải các công cụ liên quan để chạy được dự án
@@ -188,7 +270,7 @@
 	- Sau đó tạo các tables bằng file sql 
 - Với việc triển khai dự án ta có 2 cách chính 1 là database first và code first
 	- Những dự án chạy code first giúp triển khai toàn diện và giúp cho dev control được nhiều hơn 
-#### Dự án fontend 
+#### 3.2.1.1. Dự án fontend 
 - Search `how to run reacte project` cài đặt nodejs : [nodejs18-install.sh](/Tools-install/nodejs/nodejs-18-install.sh)
 - Di chuyển vào thư mục fontend và chạy dự án 
 	```
@@ -206,11 +288,11 @@
 	pm2 start npm --name onlineshop-fontend -- run "start"
 	pm2 mornitor 
 	```
-## Thiết lập dự án trên Gitlab
+## 3.3. Thiết lập dự án trên Gitlab
 - (dev-server) Kill hết tiến trình chạy dự án trước đó 
     - Vào Gitlab-server để tạo group và project mới để thực hiện clone về dev-server 
     -  Truy cập vào thư mục /home/onlineshop và triển khai clone git đã tạo từ gitlab
-## Quy trình triển khai mọi dự án
+## 3.4. Quy trình triển khai mọi dự án
 - Các công ty thường có 3 môi trường: dev, staging(pre-product), production
 - 3 Cách triển khai dự án:
     - Dạng services (chạy trực tiếp triên linux)
@@ -259,14 +341,14 @@
         - Pentest: giả lập quá trình tấn công 
         - Report: qua các kiểm tra, báo cáo rồi lưu lại để qua từng triển khai từng version có cải thiện gì không
 - Hãy cân nhắc tùy thuộc vào công ty, dự án để áp dụng các quy trình bảo mật như trên
-## Bản chất của việc triển khai tự động
+## 3.5. Bản chất của việc triển khai tự động
 ![alt text](/Images/image-2.png)
 
 - 3 Công cụ thịnh hành để chạy CI/CD: Gitlab, jenkins, argo 
 - Chạy độc lập bằng daemon, chạy bằng docker và chạy bằng k8s 
 - Gitlab CI/CD:
     - Gitlab-runner là 1 con robot và file yaml là kịch bản để con robot đó có thể đọc được từ file yaml ra và thực hiện các công việc
-## Các chiến lược gitlab runner 
+## 3.6. Các chiến lược gitlab runner 
 - Chiến lược
     - For an instance runner: phải là admin 
         - Tạo ra 1 con robot để mọi người dù bất kỳ ai có thể sử dụng 
@@ -290,13 +372,13 @@
         - Vào Project -> runner -> register an instance runner 
         - Có thể sử dụng của cả share và group runner nếu muốn và có thể tạo thêm runner cho riêng nó 
         - Khi nào nên tạo: ở những project nằm độc lập hoặc project đang nằm ở server đang chạy những tác vụ riêng biệt ta mới nên tạo ở trong project
-## Quy trình 1 (Chạy dự án bằng daemon) 
-### Backend 
+## 3.7. Quy trình 1 (Chạy dự án bằng daemon) 
+### 3.7.1. Backend 
 - Tạo nhánh `pipeline-be-1` và viết file [.gitlab-ci.yml](/Files-config/Backend/Gitlab/pipeline-be-1/.gitlab-ci.yml)
-### Frontend
+### 3.7.2. Frontend
 - Tạo nhánh `pipeline-fe-1` và viết file [.gitlab-ci.yml](/Files-config/Frontend/Gitlab/pipeline-fe-1/.gitlab-ci.yml)
-## Quy trình 2 (Tạo thêm artifacts và lưu code đã build để thuận tiện việc rollback)
-### Thông tin, lý thuyết cần có 
+## 3.8. Quy trình 2 (Tạo thêm artifacts và lưu code đã build để thuận tiện việc rollback)
+### 3.8.1. Thông tin, lý thuyết cần có 
 - Artifacts CI/CD
     - Đảm bảo, tiết kiệm tài nguyên, thời gian build không bị lặp lại các tiến trình
     - Việc quản lý tường minh hơn lưu trữ theo từng folder hay theo thừng file 
@@ -306,7 +388,7 @@
     - Build xong -> đẩy kq lên đây và deploy kéo các file đó và deploy, sử dụng các phân tích
     - Build và deploy thì cần phải cài runner riêng cho từng server
 - Tạo thêm server `build-server` có thể sử dụng `database-server` làm server build để đỡ tốn tài nguyên và 1 server `artifacts JFrog` và adđ hosts là `jfrog.anphuc.site`
-### Trên server `artifacts JFrog`
+### 3.8.2. Trên server `artifacts JFrog`
 - Search `jfrog install docker`
 - Tạo thư mục để lưu trữ lại data của JFrog `mkdir -p /tools/jfrog/data`
 - Cài đặt `docker`: `sudo apt install docker.io -y`
@@ -322,19 +404,20 @@
 - Tạo 1 repo riêng cho dự án `online-shop` và phần enviromments để là DEV
 - Vào User và tạo user `onlineshop` và bỏ group mặc định và thêm quyền của user này vào repo kia 
 - Vào `Permissions` và add repo `online-shop` với tên là `onlineshop-perms` và thêm user vừa tạo `onlineshop` và set quyền `Manage`
-### Trên `server build`
-    - Cài đặt [netcore6](/Tools-install/netcore/netcore6-install.sh) và [nodejs18](/Tools-install/nodejs/nodejs-18-install.sh)
-    - Câu lệnh để đẩy file và kéo file về từ `artifacts` là 
-        ```
-        curl -X PUT -u user:'password' -T file "http://jfrog.anphuc.site/artifactory/online-shop/file"
-        curl -u user:'password' -O "http://jfrog.anphuc.site/artifactory/online-shop/file"
-        ```
+### 3.8.3. Trên `server build`
+- Cài đặt [netcore6](/Tools-install/netcore/netcore6-install.sh) và [nodejs18](/Tools-install/nodejs/nodejs-18-install.sh)
+- Câu lệnh để đẩy file và kéo file về từ `artifacts` là 
+    
+    ```
+    curl -X PUT -u user:'password' -T file "http://jfrog.anphuc.site/artifactory/online-shop/file"
+    curl -u user:'password' -O "http://jfrog.anphuc.site/artifactory/online-shop/file"
+    ```
     - Tư duy là build xong zip lại đẩy lên artifacts sau đó deploy thì kéo về giải nén và chạy
-### Tích hợp vào `ci/cd`
+### 3.8.4. Tích hợp vào `ci/cd`
 - Tạo ra nhánh `pipeline-be-2` từ `pipeline-be-1` và sửa file [.gitlab-ci.yml](/Files-config/Backend/Gitlab/pipeline-be-2/.gitlab-ci.yml)
     - Thử tạo tag và kiểm tra tiến trình
 - Làm tương tự với frontend
-## Quy trình 3 (Chạy dự án bằng docker độc lập)
+## 3.9. Quy trình 3 (Chạy dự án bằng docker độc lập)
 - Kiểm tra và kill dự án chạy daemon trước đó 
 - Cài đặt docker : [docker-install.sh](/Tools-install/docker/docker-install.sh)
 - Nghiên cứu `docker workflow` 
@@ -348,8 +431,8 @@
     - Tạo dockerfile và sửa .gitlab-ci.yml
     - Thêm user gitlab-runner và onlineshop vào group docker để đủ quyền để chạy và xóa docker 
     - Commit và tạo tag tương ứng để chạy dự án 
-## Quy trình 4 (Dựng lên 1 kho lưu trữ các docker image) 
-### Các yêu cầu, quy trình thiết lập ban đầu
+## 3.10. Quy trình 4 (Dựng lên 1 kho lưu trữ các docker image) 
+### 3.10.1. Các yêu cầu, quy trình thiết lập ban đầu
 - Search `container registry tools`
     - Sử dụng bên thứ 3 `AWS ECR`
     - Dựng AWS để làm phần này hoặc dựng VPS khoảng 2GB ram 
@@ -358,7 +441,7 @@
     - Sử dụng EC2 để dựng lên server và cài dịch vụ này 
     - Với `ubuntu 22.04, t2.small, store 15Gb`
     - Cần 1 domain để sử dụng và trỏ đến địa chỉ ip public của AWS vd `portus.anphuc.site`
-### Cấu hình chính
+### 3.10.2. Cấu hình chính
 - Cấu hình update, và cài đặt docker, docker-compose, certbot để xác thực ssl 
     ```
     apt install -y docker.io docker-compose certbot net-tools
@@ -422,7 +505,7 @@
     ```
     docker pull docker push portus.anphuc.site/onlineshop/online-shop-frontend:...
     ```
-## Quy trình 5 (Tư duy bảo vệ file tự động)
+## 3.11. Quy trình 5 (Tư duy bảo vệ file tự động)
 - Dự án trong 1 nhóm thường chỉnh sửa được file `.gitlab-ci.yml` nên cần phải thay đổi vị trí và không nên thường xuyên sửa đổi file tự động này tránh được việc dev sửa đổi file pipeline này 
 - Cấu hình tăng sự kiểm soát và giảm sự thay đổi đến các file cấu hình đó
 - `Cách 1`: Sử dụng include của gitlab viết cấu hình ở 1 nơi khác và trong dự án chỉ cần include vào cái file, dự án đó thôi và những người khác sẽ không thể đủ quyền để sửa được cái file này
@@ -438,8 +521,8 @@
     - Tạo ra 1 brach `pipeline-be-6` từ `pipeline-be-5` 
     - Xóa file `.gitlab-ci.yml` 
     - Tạo tag và kiểm tra tiến trình
-## Quy trình 6 SAST (Thiết lập quét mã nguồn, kiểm tra source code) 
-### Phương hướng, thiết lập tư duy 
+## 3.12. Quy trình 6 SAST (Thiết lập quét mã nguồn, kiểm tra source code) 
+### 3.12.1. Phương hướng, thiết lập tư duy 
 - Bảo mật mã nguồn, áp dụng công nghệ, công cụ để quét hoặc kiểm tra được source code có những phần nào chưa hợp lý, như chưa clean code, có những chỗ chưa hợp lý, lộ token, ... những repo,trường để viết cái cần thiết 
 - Dựng môi trường, dựng công nghệ để phát hiện ra các lỗ hỗng bảo mật source code và các dev sẽ tiến hành fix 
 - Bảo mật về hạ tầng, lỗ hổng của server, docker images, container,... kiểm tra, quét ra có những cách thức fix phù hợp
@@ -456,7 +539,7 @@
       - `Checkmarx`: 
       - `Code Climate`: nhanh, sd dễ dàng, quét chưa sâu lắm
     - Vào [gartner.com](https://www.gartner.com/reviews/market/application-security-testing) để xem các phần so sánh các công cụ để mình có xem được các công cụ đó có áp dụng được hay không
-### Sử dụng [codeclimate](https://github.com/codeclimate) 
+### 3.12.2. Sử dụng [codeclimate](https://github.com/codeclimate) 
 - Quay lại `dev-server` chuyển sang user gitlab-runner chạy lệnh
     ```
     docker run \ 
@@ -496,7 +579,7 @@
     ```
     - Tạo Tag và kiểm tra file test 
     - Có thể chỉnh sửa nâng cao hơn ở file `.codeclimate.yml` như là cấu hình giới hạn quét ở thư mục nào rồi các chiến lược quét
-### Sử dụng [Snyk](https://docs.snyk.io/)
+### 3.12.3. Sử dụng [Snyk](https://docs.snyk.io/)
 - Vào docs để xem các cách triển khai 
     - Để sử dụng được công cụ này thì thiết bị phải cài đặt nodejs cũng như là `cài snyk trên npm`
     - Tiến hành login với dockerhub và `source code sẽ lưu trữ ở dockerhub`
@@ -550,12 +633,12 @@
             expire_in: 1 day
     ```
     - Tạo tag và kiểm tra 
-## Quy trình 7 SCA (Kiểm tra bảo mật phần hạ tầng)
+## 3.13. Quy trình 7 SCA (Kiểm tra bảo mật phần hạ tầng)
 - Quét docker image: có những lỗ hổng, và cụ kiểm tra 
 - Search `docker images tools scan`: sử dụng [trivy](https://github.com/aquasecurity/trivy) 
 - Có thể lọc theo mức độ cảnh báo để hiển thị như mức `HIGH` và mức `MEDIUM` trở lên 
 - Vừa có thể quét được `docker images` mà còn có thể quét được `source code` và còn có thể quét được cả `bảo mật của k8s` dễ sử dụng và mạnh mẽ 
-### Triển khai thủ công 
+### 3.13.1. Triển khai thủ công 
 - Quét source code: 
     ```
     docker run aquasec/trivy fs . 
@@ -599,7 +682,7 @@
             - ${TRIVY_IMAGE_REPORT}.html
             expire_in: 1 day
     ```
-## Quy trình 8 ()
+## 3.14. Quy trình 8 ()
 - Đầu ra là gì: ứng dụng hoàn chỉnh tránh được các cái lỗi xss, SQL injection, ... 
 - Kiểm tra bảo mật cho website đã được chạy hoàn chỉnh 
 - Test website khi đang chạy trực tiếp
@@ -612,7 +695,7 @@
     - Xác thực và thử kiểm tra các lỗ hỗng phức tạp 
     - Có định dạng html 
     - Quét trực tiếp và in kết quả ra file html
-### Cài đặt và sử dụng trực tiếp bằng giao diện
+### 3.14.1. Cài đặt và sử dụng trực tiếp bằng giao diện
 - Search `arachni docker images` hoàn toàn có thể chạy bằng docker
 - Triển khai trên `build-server` 
     ```
@@ -628,7 +711,7 @@
     - Share with: ...
 - Quét thành công với các report 
 - Có thể download dưới dạng html và kiểm tra 
-### Cài đặt và sử dụng trực tiếp bằng CLI
+### 3.14.2. Cài đặt và sử dụng trực tiếp bằng CLI
 - Tạo 1 user mới `adduser arachni` vào thư mục home của user và download source code 
 - `Arachni release` và [cách sử dụng bằng CLI](https://github.com/Arachni/arachni/wiki/Command-line-user-interface)
 ```
@@ -651,7 +734,7 @@ wget https://github.com/Arachni/arachni/releases/download/v1.6.0/arachni-1.6.0-0
     docker run --rm -v /tmp/:/tmp/ arachni:1.6.0-0.6.0 bin/arachni_reporter /tmp/online-shop-frontend.afr --reporter=html:outfile=/tmp/online-shop-frontend.html.zip
     ```
 - Có thể push lên dockerhub để dễ dàng kiểm tra
-### Chạy trên pipeline 
+### 3.14.3. Chạy trên pipeline 
 - Tạo 1 nhánh `pipeline-fe-9` từ `pipeline-fe-8` 
 - Sau bước deploy thì sẽ tạo ra 1 bước `security scan website` và tạo biến report 
 - Và thêm stage
@@ -674,7 +757,7 @@ wget https://github.com/Arachni/arachni/releases/download/v1.6.0/arachni-1.6.0-0
             paths:
             - $ARACHNI_WEBSITE_REPORT.html.zip
     ```
-## Quy trình 9 (Kiểm tra hiệu năng)
+## 3.15. Quy trình 9 (Kiểm tra hiệu năng)
 - Tốc độ phản hồi của trang web ảnh hưởng rất nhiều đến hiệu quả, uy tín và trải nghiệm khách hàng 
 - Có rất nhiều lý do từ bên phía vận hành hoặc dev
 - Kiểm tra hiệu xuất để xem các kết quả trả ra như thế nào rồi xác định nguyên nhân do đâu để khắc phục và đảm bảo chi phí rồi phần nào chưa tốt và phần đó của bên nào để cho các bên liên quan có thể khắc phục nhanh chóng -> `Đó là phương pháp giả lập số lượng ccu (Concurrent Users)` số lượng người truy cập đồng thời 
@@ -701,7 +784,7 @@ wget https://github.com/Arachni/arachni/releases/download/v1.6.0/arachni-1.6.0-0
     - duration: thời gian chạy 
     - iteration: Chỉ định số lần người dùng ảo thực hiện kịch bản kiểm thử bất kể thời gian bao nhiêu
 - `Automation perfomance testing`: kiểm thử hiệu năng tự động hóa, là quá trình lặp đi lặp lại và nhất quán nhằm phát hiện các vấn đè về độ tin cậy ở các gd khác nhau trong các giai đoạn phát triển và phát hành phần mềm, tích hợp vào quy trình pipeline
-### Cài đặt k6 và triển khai test
+### 3.15.1. Cài đặt k6 và triển khai test
 - search [`install k6`](https://grafana.com/docs/k6/latest/set-up/install-k6/)
 - Script [k6-install.sh](Tools-install/k6/k6-install.sh)
 - Tạo 1 thư mục `mkdir -p /tools/test-k6/` để chứa các kịch bản 
@@ -733,7 +816,7 @@ wget https://github.com/Arachni/arachni/releases/download/v1.6.0/arachni-1.6.0-0
     - Chạy `k6 run -u 100 -d 20s smoke-test.js`
 - Khi tích hợp swagger thì sẽ có 1 url `http://192.168.254.110/swagger/v1/swagger.json` có thể hoàn toàn test = endpoint ntn test = DAST hoặc pentest hoàn toàn có thể sử dụng endpoint đó 
 - Thêm các tư duy, kịch bản test thì có thể có các cấu hình ở [Thư mục](/Files-config/k6/)
-### Triển khai trên pipeline 
+### 3.15.2. Triển khai trên pipeline 
 - Tạo ra 1 nhánh `pipeline-be-10` kế thừa từ `pipline-be-9`
     - Tạo ra 1 thư mục chứa các file kịch bản `performace_testing_script` và tạo file [smoke-test.js](/Files-config/k6/smoke-test.js) vào đó và commit `config(docs): add smoke test script` 
     - Có bước after_script: sau mỗi bước scan ra report tránh lỗi quyền 
@@ -787,8 +870,8 @@ wget https://github.com/Arachni/arachni/releases/download/v1.6.0/arachni-1.6.0-0
         - Thời gian tải trang hoàn thành: dưới 3s
         - tti: dưới 5s 
         - Được coi là 1 website tốt
-## Triển khai bằng Jenkins 
-### Cài đặt và cấu hình 
+## 3.16. Triển khai bằng Jenkins 
+### 3.16.1. Cài đặt và cấu hình 
 - Tạo 1 con server mới
     - IP: `192.168.254.120` domain `jenkins.anphuc.tech`
     - Cài đặt jenkins : [jenkins-install.sh](/Tools-install/Jenkins/jenkins-install.sh)
@@ -809,18 +892,62 @@ wget https://github.com/Arachni/arachni/releases/download/v1.6.0/arachni-1.6.0-0
 - Viết bằng service để chạy nền 
     - vi [/etc/systemd/system/jenkins-agent.service](/Files-config/Jenkins/jenkins-agent.service)
     - systemctl daemon-reload 
-
-## Triển khai dự án bằng Kubernetes
+### 3.16.2. Xây dựng quy trình pipeline trên Jenkins
+- Triển khai quy trình từ pipeline-be-3 sang
+    - Vào *Plugins* trong setting và tìm đến: `Gitlab` và `Blue ocean`
+    - Tạo 1 user `Jenkins` trên `Gitlab` sử dụng để clone code từ gitlab, chọn Admin để có thể clone các project
+    - Vào lại `Gitlab` đăng nhập vào user `Jenkins`, vào setting -> network, chọn vào Outbound requests và allow request from hooks -> quay lại tạo token cho user `Jenkins` -> tick vào api vào tạo được token
+    - Quay lại `Jenkins` vào manage -> system, kéo xuốn phần gitlab và cung cấp các thông tin của gitlab, xác thực sử dụng token vừa tạo ở trên `jenkins-gitlab-user-token-api`
+- Sau khi đã xong thì thử tạo 1 thư mục bên jenkins `online-shop` sau đó tạo 1 pipeline `online-shop-backend`
+    - Cấu hình theo các ảnh dưới 
+    
+    ![alt text](image.png)
+    ![alt text](image-1.png)
+    - Xuống phần pipeline, chọn `pipeline script ...` SCM `git` và dán link repo url của dự án vào 
+    - Credentials: Sử dụng thôn tin login của user `Jenkins` bên `Gitlab` `Jenkins-gitlab-user-login` 
+    - Chọn branch `pipeline-be-3`-> sau đó sửa theo ở dưới
+- Quay lại `Gitlab` cấu hình sao cho có thể kết nối jenkins qua webhook 
+    - Vào projects `online-shop-backend` -> chọn setting, webhook 
+    - Quay lại jenkins tạo token `access-token-1`
+    - Lấy token đưa vào Url ở trên webhook gitlab với admin:token@jenkins.anphuc.site/project/(thư mục của Jenkin) tick tag, bỏ tick ssl, push
+- Tiến hành chạy pipeline
+    - từ pipeline-be-3 tạo 1 nhánh `jenkins-pipeline-be-3`
+    - Tạo 1 file `Jenkinsfile` và viết bằng các tìm `jenkinsfile syntax` 
+    - Nên thêm quyền cho user jenkins trên server jenkins agent  
+    
+    ```pipeline 
+    pipeline {
+        agent none 
+        enviroment {
+            CI_
+        }
+        stages('get information project') {
+            agent {
+                label `ip jenkins agent`
+            }
+        }
+        stages('build') {
+            agent {
+                label `ip jenkins agent`
+            }
+            steps {
+                script {
+                    sh(script: """ docker build -t $IMAGE_VERSION . """,lablel: "" )
+                }
+            }
+        }
+    }
+    ```
+## 3.17. Triển khai dự án bằng Kubernetes
 - Khi chỉ triển khai bằng dotnet hay docker run thì dự án đã chạy được tuy nhiên các cách triển khai đó thì sẽ cho thấy những yếu điểm trong bài toán lượng người dùng truy cập bất thường
     - Biết scale hệ thống, tăng tài nguyên hoặc tăng thêm server 
     - Tăng và hạ tài năng với container đơn giản và thuận tiện hơn nhiều so với chạy daemon 
     - Khi lượng người truy cập tăng đến cái ngưỡng mà ta thiết lập thì hệ thống sẽ tự động scale lên và khi lượng truy cập bị giảm đi thì các điều kiện về phần chịu tải không đáp ứng, giảm xuống hạ tầng dự án cũng giảm xuống một cách tự động
-### Cài đặt và cấu hình 
+### 3.17.1. Cài đặt và cấu hình 
 - Cài đặt tự động bằng [`kubespray`](https://github.com/kubernetes-sigs/kubespray)
 - Cài đặt với `3 server` và ram là `3GB `và CPU là `2` cấu hình server và add host 3 server này lại với nhau với tên `k8s-master-1/2/3` update packed và cài pythone để cài ansible 
 - Tắt swapoff trước `swapoff -a` trên cả 3 server 
 - Cài đặt tự động bằng Ansible từ server `master-1`
-    - ``
     - `apt install ansible-core -y` 
     - Để ý phần requirements xem thử yêu cầu ansible từ phiên bản bao nhiêu để dễ cấu hình 
     - Cấu hình copy tự động bằng tay 
@@ -832,13 +959,13 @@ wget https://github.com/Arachni/arachni/releases/download/v1.6.0/arachni-1.6.0-0
     - vào thư mục vừa được clone về và chạy lệnh `cp -rfp inventory/sample inventory/mycluster` tạo 1 file [`inventory/mycluster/hosts.ini`](/Files-config/Ansible/hosts.ini) 
     - Chạy lệnh để cài đặt và reset lại nếu bị lỗi
     ```
-    ansible-playbook -i inventpry/mycluster/host.ini --become --become-user-root cluster.yml
+    ansible-playbook -i inventory/mycluster/host.ini --become-user root cluster.yml
 
-    ansible-playbook -i inventpry/mycluster/host.ini --become --become-user-root reset.yml
+    ansible-playbook -i inventory/mycluster/host.ini --become-user root reset.yml
     ```
     - Chạy `kubectl get node`, `kubectl get pod -A` -> thấy bị lỗi ở 2 pod kube-system 
     - kiểm tra log `kubectl logs ... -n kube-system` -> thấy lỗi loop và sửa `kubectl edit configmap coredns -n kube-system` -> sửa forward thành `. 8.8.8.8 8.8.4.4` -> `kubectl rollout restart deployment coredns -n kube-system`
-### Lý thuyết
+### 3.17.2. Lý thuyết
 - Search `kubernetes flow` 
     - Luồng đi từ ngoài vào: `Traffic -> ingress -> service -> deployment -> pod`
     - Triển khai dự án
@@ -853,5 +980,9 @@ wget https://github.com/Arachni/arachni/releases/download/v1.6.0/arachni-1.6.0-0
     - NodePort: Đi qua ứng dụng mà không đi qua ingress, expores và chạy ứng dụng với dãy port (30000-32767) được gán tương ứng
     - Loadbalance: Tích hợp khi sử dụng cloud, khi mà k8s được tích hợp, triển khai trên AWS,...
     - ExternalName: Hoạt động khi gọi đến service thì DNS sẽ trả về tên miền DOMAIN được sử dụng khi chỉ định 1 tài nguyên bên ngoài internet 
+
 - `Ingress`: Dùng để quản lý định tuyến lưu lượng mạng, tài nguyên quản lý lưu lượng mạng http, https từ bên ngoài vào đên các dịch vụ cụ thể bên trong cụm
-  -    
+
+## GitOps with ArgoCD
+
+

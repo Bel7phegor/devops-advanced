@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sneaker-ecommerce-frontend-deployment
+  namespace: sneaker-ecommerce-ns
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: sneaker-ecommerce-frontend
+  template:
+    metadata:
+      labels:
+        app: sneaker-ecommerce-frontend
+    spec:
+      containers:
+        - name: sneaker-ecommerce-frontend
+          image: anphuc2370/online-shop-frontend:release-v1.0.0_7e6dd2ec
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sneaker-ecommerce-frontend-sv
+  namespace: sneaker-ecommerce-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: sneaker-ecommerce-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sneaker-ecommerce-frontend-ingress
+  namespace: sneaker-ecommerce-ns
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: sneaker-shop.anphuc.tech
+      http:
+        paths:
+          - backend:
+              service:
+                name: sneaker-ecommerce-frontend-sv
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix

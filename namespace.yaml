@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sneaker-ecommerce-ns
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+    name: monitoring-pv
+spec:
+    capacity:
+        storage: 10Gi
+    accessMode:
+        - ReadWriteOnce
+nfs:
+    path: /data/monitoring
+    server: 192.168.1.113
+persistentVolumeReClaimPolicy: Retain
+storageClassName: nfs-storage
